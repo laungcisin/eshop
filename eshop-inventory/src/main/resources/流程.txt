@@ -1,0 +1,22 @@
+Application
+    ------->InitListener
+            ------->
+                    初始化RequestProcessThreadPool：
+                    有10个线程的线程池，
+                    每个线程(RequestProcessThread)有一个自己的监控队列(queue)，
+                        线程池初始化的时候，就submit线程，线程循环处理queue，
+                        while(true) {
+                            Request request = queue.take();
+                            ...
+                            request.process();
+                            ...
+                        }
+
+
+请求过来时，Controller将请求对象封装成对应的Request对象，然后由RequestAsyncProcessService处理，
+RequestAsyncProcessService就是将请求放入相应的队列中。
+因为线程(RequestProcessThread)一直循环处理，只要队列中有Request，线程就处理该Request。
+
+
+http://localhost:8080/updateProductInventory?productId=1&inventoryCnt=100
+http://localhost:8080/getProductInventory?productId=1

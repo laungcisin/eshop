@@ -1,0 +1,14 @@
+nginx、缓存服务、redis中都没有数据，
+
+    1.此时商品服务向kafka推送更新消息，更新商品信息
+    2.多个缓存服务实例去获取数据--缓存重建
+
+    商品服务向kafka推送更新消息：
+        {"serviceId":"productInfoService", "productId": 8}
+
+    商品服务获取数据-缓存重建：
+        http://localhost:8080/getProductInfo?productId=8
+
+    商品更新---缓存重建，
+
+    4.需要zk分布式读解决

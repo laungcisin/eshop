@@ -7,6 +7,7 @@ import com.laungcisin.eshop.cache.service.CacheService;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import redis.clients.jedis.JedisCluster;
 
 import javax.annotation.Resource;
@@ -49,7 +50,13 @@ public class CacheServiceImpl implements CacheService {
     }
 
     @Override
-    public ProductInfo getProductInfoFromRedisCache(ProductInfo productInfo) {
+    public ProductInfo getProductInfoFromRedisCache(Long productId) {
+        String key = "product_info_" + productId;
+        String json = jedisCluster.get(key);
+        if (!StringUtils.isEmpty(json)) {
+            return JSONObject.parseObject(json, ProductInfo.class);
+        }
+
         return null;
     }
 
@@ -72,7 +79,13 @@ public class CacheServiceImpl implements CacheService {
     }
 
     @Override
-    public ShopInfo getShopInfoFromRedisCache(ShopInfo shopInfo) {
+    public ShopInfo getShopInfoFromRedisCache(Long shopId) {
+        String key = "shop_info_" + shopId;
+        String json = jedisCluster.get(key);
+        if (!StringUtils.isEmpty(json)) {
+            return JSONObject.parseObject(json, ShopInfo.class);
+        }
+
         return null;
     }
 

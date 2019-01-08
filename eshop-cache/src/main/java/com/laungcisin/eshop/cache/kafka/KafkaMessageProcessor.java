@@ -5,8 +5,12 @@ import com.laungcisin.eshop.cache.model.ProductInfo;
 import com.laungcisin.eshop.cache.model.ShopInfo;
 import com.laungcisin.eshop.cache.service.CacheService;
 import com.laungcisin.eshop.cache.spring.SpringContext;
+import com.laungcisin.eshop.cache.zk.ZooKeeperSession;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 /**
  * kafka消息处理线程
@@ -50,13 +54,46 @@ public class KafkaMessageProcessor implements Runnable {
         Long productId = messageJSONObject.getLong("productId");
 
         // TODO：模拟获取数据库信息
-        String productInfoJSON = "{\"id\": 5, \"name\": \"iphone7手机\", \"price\": 5599, \"pictureList\":\"a.jpg,b.jpg\", \"specification\": \"iphone7的规格\", \"service\": \"iphone7的售后服务\", \"color\": \"红色,白色,黑色\", \"size\": \"5.5\", \"shopId\": 1, \"modifiedTime\": \"2017-01-01 12:00:00\"}";
-
+        String productInfoJSON = "{\"id\": 11, \"name\": \"iphone7手机\", \"price\": 5599, \"pictureList\":\"a.jpg,b.jpg\", \"specification\": \"iphone7的规格\", \"service\": \"iphone7的售后服务\", \"color\": \"红色,白色,黑色\", \"size\": \"5.5\", \"shopId\": 1, \"modifiedTime\": \"2017-01-01 12:00:00\"}";
         ProductInfo productInfo = JSONObject.parseObject(productInfoJSON, ProductInfo.class);
+
+        // 获取zk分布式锁
+        ZooKeeperSession zooKeeperSession = ZooKeeperSession.getInstance();
+        zooKeeperSession.acquireDistributedLock(productId);
+
+        // 获取锁后，从redis中获取数据
+        ProductInfo existedProductInfo = cacheService.getProductInfoFromRedisCache(productId);
+        if (existedProductInfo != null) {
+            try {
+                DateTimeFormatter df = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+                String productInfoModifiedTime = productInfo.getModifiedTime();
+                String existedProductInfoModifiedTime = existedProductInfo.getModifiedTime();
+
+                LocalDateTime time1 = LocalDateTime.parse(productInfoModifiedTime, df);
+                LocalDateTime time2 = LocalDateTime.parse(existedProductInfoModifiedTime, df);
+
+                if (time1.isBefore(time2)) {
+                    return;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            System.out.println("Kafka消息服务：redis中不存在productId:[" + productInfo.getId() + "]的数据");
+        }
+
+        // FIXME:模拟多线程访问：更新商品信息的同时，有缓存服务去获取商品信息(缓存重建)
+        try {
+            Thread.sleep(10000);
+        } catch (Exception e) {
+        }
 
         cacheService.saveProductInfo2LocalCache(productInfo);
         System.out.println("----------------------------: 获取刚保存的商品id：" + cacheService.getProductInfoFromLocalCache(productId));
         cacheService.saveProductInfo2RedisCache(productInfo);
+        // 释放分布式锁
+        zooKeeperSession.releaseDistributedLock(productId);
     }
 
     /**

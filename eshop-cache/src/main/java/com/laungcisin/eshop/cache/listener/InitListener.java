@@ -1,6 +1,8 @@
 package com.laungcisin.eshop.cache.listener;
 
 import com.laungcisin.eshop.cache.kafka.KafkaConsumer;
+import com.laungcisin.eshop.cache.rebuild.RebuildCacheQueue;
+import com.laungcisin.eshop.cache.rebuild.RebuildCacheThread;
 import com.laungcisin.eshop.cache.spring.SpringContext;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.context.support.WebApplicationContextUtils;
@@ -21,6 +23,8 @@ public class InitListener implements ServletContextListener {
         SpringContext.setApplicationContext(context);
 
         new Thread(new KafkaConsumer("cache-message")).start();
+        new Thread(new RebuildCacheThread()).start();
+        RebuildCacheQueue.init();
     }
 
     @Override
